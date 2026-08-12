@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arclight — OS Simulator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ INSTALL FLOW ============ -->
+<div id="install" class="overlay">
+  <div class="install-card" id="install-card">
+    <div class="install-step" data-step="0">
+      <div class="case-art">
+        <div class="case-lid"></div>
+        <div class="case-glasses">◠◠</div>
+      </div>
+      <h1>ARCLIGHT</h1>
+      <p class="tagline">Same glasses. Different mind.</p>
+      <p class="sub">Glasses detected in charging case · battery 84%</p>
+      <button class="btn primary" data-next>Install Arclight</button>
+    </div>
+
+    <div class="install-step hidden" data-step="1">
+      <h2>One screen. The whole deal.</h2>
+      <div class="promise">
+        <h3>What it will remember</h3>
+        <p>A rolling 12-hour episodic buffer, indexed on the frames, purged continuously. Durable facts about you in a semantic store — every entry human-readable, source-timestamped, editable, deletable. Moments you pin, kept until you unpin them.</p>
+      </div>
+      <div class="promise">
+        <h3>For how long</h3>
+        <p>Episodes: 12 hours, then gone. Pins and facts: until you delete them. Everything lives on this device and your phone. Nothing is retained server-side.</p>
+      </div>
+      <div class="promise">
+        <h3>What it will never do</h3>
+        <p>Capture with the LED dark — the indicator is wired to the sensor's power rail, and the schematic is published. Store viewable frames at ambient tiers — embeddings only. Identify a stranger — ever, on-device or otherwise, even if you ask.</p>
+      </div>
+      <label class="switchrow"><input type="checkbox" id="consent"> <span>I read it. Flash the frames.</span></label>
+      <button class="btn primary" id="flash-btn" disabled>Begin install · ~12 min on the charger</button>
+    </div>
+
+    <div class="install-step hidden" data-step="2">
+      <h2 id="flash-stage">Verifying image…</h2>
+      <div class="flashbar"><div id="flashfill"></div></div>
+      <p class="sub" id="flash-detail">arclight-1.0.0-ar1.img · signed</p>
+    </div>
+
+    <div class="install-step hidden" data-step="3">
+      <div class="vesta-dot big"></div>
+      <p class="firstrun-line">“I'm Vesta. I'll learn by paying attention.”</p>
+      <p class="sub">She asks for exactly one thing:</p>
+      <p class="firstrun-ask">“What should I call you?”</p>
+      <input type="text" id="username" placeholder="your name" maxlength="24" autocomplete="off">
+      <button class="btn primary" id="firstrun-done">That's it. Wear them.</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN OS ============ -->
+<div id="os" class="hidden">
+  <header id="topbar">
+    <span class="brand">ARCLIGHT <span class="ver">sim 0.4</span></span>
+    <span id="clock">7:02 PM</span>
+    <span class="spacer"></span>
+    <span class="stat" title="Perception tier power draw"><span id="power-mw">90</span> mW</span>
+    <span class="stat" title="Frames battery">🔋 <span id="battery">84</span>%</span>
+    <button class="btn ghost" id="dock-btn" title="Set glasses in the case — Fable reads the day">Dock · consolidate</button>
+    <button class="btn ghost danger" id="uninstall-btn">Uninstall</button>
+  </header>
+
+  <main>
+    <!-- ===== glasses viewport ===== -->
+    <section id="viewport" class="scene-street">
+      <div id="scene-label">street · walking</div>
+
+      <!-- hardware LED: wired to sensor power rail -->
+      <div id="frame-led" title="Capture LED — wired to the sensor power rail. No firmware path can capture with it dark."></div>
+
+      <!-- waveguide HUD -->
+      <div id="hud">
+        <div id="hud-line" class="empty"></div>
+        <div id="hud-meta"></div>
+      </div>
+
+      <!-- spatial audio markers -->
+      <div id="audio-vesta" class="audio-src" title="Vesta's voice · 30cm ahead, center">◈</div>
+      <div id="audio-shelf" class="audio-src" title="Notification shelf · fixed over right shoulder">▤</div>
+
+      <!-- voice caption (what you hear) -->
+      <div id="voice-caption" class="hidden"></div>
+
+      <!-- whisper detect flash -->
+      <div id="whisper-flash" class="hidden">self-directed whisper · 25 dB · beamformer locked · 184 ms</div>
+
+      <!-- scene actors -->
+      <div id="actors"></div>
+    </section>
+
+    <!-- ===== control rail ===== -->
+    <aside id="rail">
+
+      <div class="panel">
+        <h3>The room <span class="hint">— one context field governs everything</span></h3>
+        <div id="context-field" class="seg">
+          <button data-ctx="alone" class="on">Alone</button>
+          <button data-ctx="one">With one</button>
+          <button data-ctx="group">Group</button>
+          <button data-ctx="call">On a call</button>
+        </div>
+        <p class="ctx-note" id="ctx-note">Alone — Vesta may speak unprompted.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Whisper <span class="hint">— no wake word; the whisper is the wake signal</span></h3>
+        <form id="whisper-form">
+          <input id="whisper-input" type="text" placeholder="whisper to Vesta…" autocomplete="off">
+        </form>
+        <div class="gestures">
+          <button class="gesture" data-g="pinch" title="pinch — confirm">∙ pinch<span>confirm</span></button>
+          <button class="gesture" data-g="double" title="double-pinch — summon">∶ double<span>summon</span></button>
+          <button class="gesture" data-g="hold" title="pinch &amp; hold — pin this moment">◉ hold<span>pin moment</span></button>
+          <button class="gesture" data-g="swipe" title="thumb-swipe — advance / dismiss">→ swipe<span>advance</span></button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Perception ladder <span class="hint">— escalates only on evidence</span></h3>
+        <div id="ladder"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Last turn</h3>
+        <div id="telemetry">
+          <div><span class="k">route</span><span class="v" id="t-route">—</span></div>
+          <div><span class="k">latency</span><span class="v" id="t-latency">—</span></div>
+          <div><span class="k">turn mix</span><span class="v" id="t-mix">local 0 · haiku 0 · fable 0</span></div>
+          <div><span class="k">interrupts today</span><span class="v" id="t-int">0 · wrong 0 <em>(budget: &lt;1 wrong/day)</em></span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>The five demos</h3>
+        <div id="demos">
+          <button data-demo="keys">1 · The keys</button>
+          <button data-demo="platform">2 · The platform</button>
+          <button data-demo="name">3 · The name</button>
+          <button data-demo="chain">4 · The chain</button>
+          <button data-demo="interrupt">5 · The interrupt</button>
+        </div>
+        <p class="ctx-note" id="demo-note">Demo five is the whole company.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Memory <button class="btn ghost tiny" id="mem-toggle">open</button></h3>
+        <div id="memory" class="hidden">
+          <h4>Semantic store <span class="hint">— editable, deletable, yours</span></h4>
+          <ul id="sem-list"></ul>
+          <form id="sem-form"><input id="sem-input" placeholder="add a fact Vesta should keep…" autocomplete="off"></form>
+          <h4>Episodic buffer <span class="hint">— last 12h, then purged</span></h4>
+          <ul id="epi-list"></ul>
+          <h4>Pins</h4>
+          <ul id="pin-list"></ul>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- narration strip: the keynote voice explaining what just happened -->
+  <footer id="narration"><span id="narration-text">Arclight is running. Double-pinch to summon Vesta, or whisper.</span></footer>
+</div>
+
+<!-- phone bounce modal (irreversible actions) -->
+<div id="phone-modal" class="overlay hidden">
+  <div class="phone">
+    <p class="phone-head">Arclight · confirmation</p>
+    <p id="phone-body">This action is irreversible.</p>
+    <div class="fingerprint" id="fingerprint" title="hold to confirm">◉</div>
+    <p class="sub">touch &amp; hold to confirm on phone</p>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
